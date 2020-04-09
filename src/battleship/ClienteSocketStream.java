@@ -1,6 +1,7 @@
 package battleship;
 
 import java.io.*;
+
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,9 +9,14 @@ import java.util.Scanner;
 
 public class ClienteSocketStream {
 	public static void main(String[] args) {
-		Boolean sunk = false; // True cuando la coordenada introducida coincida con la de un barco
-		boolean ready = false; // True cuando el jugador complete su tablero
-		ArrayList<int[]> tablero = new ArrayList();
+		boolean sunk = false; // Para comprobar si el jugagor ha acertado, true acabara el juego
+		boolean ready = false;
+		/*
+		 * ready sirve para asegurar que ambos tengan su tablero completo antes de que
+		 * alguno de ellos empieze a jugar. Intentaran enviar/recibir esta variable una
+		 * vez tengan su tablero completo. El valor y el tipo de dato es irrelavante
+		 */
+		ArrayList<int[]> tablero = new ArrayList<int[]>();
 		int size = 8;
 		int numBoats = 3;
 
@@ -32,7 +38,7 @@ public class ClienteSocketStream {
 			Scanner myObj = new Scanner(System.in);
 			for (int i = 1; i <= numBoats; i++) {
 				int[] pos = askForPos(size, myObj, i);
-				// Comprobar si la posicion se repite
+				// Comprobara si la posicion se repite y pedira una coordenada si coinciden
 				for (int j = 0; j < tablero.size(); j++) {
 					while (Arrays.toString(tablero.get(j)).equals(Arrays.toString(pos))) {
 						System.out.println("Tus posiciones no pueden coincidir");
@@ -43,24 +49,24 @@ public class ClienteSocketStream {
 			}
 			System.out.println("Tu Tablero:");
 			tablero.forEach((n) -> System.out.println(Arrays.toString(n)));
-			ready = true;
+
+			// Tablero completado, comprobando que el otro usuario tambien lo tenga
 			oos.writeBoolean(ready);
 			oos.flush();
 			ready = ois.readBoolean();
 
 			// Empiezan a jugar
 			while (!sunk) {
-				sunk = clientTurn(ois, oos, myObj);
-				System.out.println(sunk);
+				sunk = clientTurn(sunk, ois, oos, myObj);
 				if (!sunk) {
 					sunk = serverTurn(sunk, tablero, os, ois, oos);
-					System.out.println(sunk);
 				}
 			}
-
-			System.out.println("Cerrando el socket cliente");
+			os.close();
+			oos.close();
+			is.close();
+			ois.close();
 			clientSocket.close();
-			System.out.println("Terminado");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -68,7 +74,6 @@ public class ClienteSocketStream {
 
 	private static boolean serverTurn(boolean sunk, ArrayList<int[]> tablero, OutputStream os, ObjectInputStream ois,
 			ObjectOutputStream oos) throws IOException {
-		String respuesta;
 		System.out.println(" ---- Turno Del Servidor ----");
 		try {
 			int[] posJugador = (int[]) ois.readObject();
@@ -78,10 +83,9 @@ public class ClienteSocketStream {
 					sunk = true;
 				}
 			}
-			respuesta = sunk ? "Hundido!" : "Agua!";
+			String respuesta = sunk ? "Hundido! Perdiste" : "Agua!";
 			System.out.println(respuesta);
 			oos.writeBoolean(sunk);
-			os.flush();
 			oos.flush();
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
@@ -89,9 +93,8 @@ public class ClienteSocketStream {
 		return sunk;
 	}
 
-	private static boolean clientTurn(ObjectInputStream ois, ObjectOutputStream oos, Scanner myObj) throws IOException {
-		boolean sunk;
-		String respuesta;
+	private static boolean clientTurn(boolean sunk, ObjectInputStream ois, ObjectOutputStream oos, Scanner myObj)
+			throws IOException {
 		System.out.println("---- Turno Del Cliente ----");
 		System.out.println("Escribe Una Coordenada:");
 		System.out.println("Coordenada X:");
@@ -99,13 +102,11 @@ public class ClienteSocketStream {
 		System.out.println("Coordenada Y:");
 		int posY = myObj.nextInt();
 		int[] pos = { posX, posY };
-
 		oos.writeObject(pos);
 		oos.flush();
-
 		System.out.println("Misil Enviado A La Posicion " + Arrays.toString(pos));
 		sunk = ois.readBoolean();
-		respuesta = sunk ? "Hundido!" : "Agua!";
+		String respuesta = sunk ? "Hundido! Ganaste!" : "Agua!";
 		System.out.println(respuesta);
 		return sunk;
 	}
