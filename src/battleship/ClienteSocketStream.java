@@ -14,7 +14,7 @@ public class ClienteSocketStream {
 		/*
 		 * ready sirve para asegurar que ambos tengan su tablero completo antes de que
 		 * alguno de ellos empieze a jugar. Intentaran enviar/recibir esta variable una
-		 * vez tengan su tablero completo. El valor y el tipo de dato es irrelavante.
+		 * vez tengan su tablero completo. El valor y el tipo de dato es irrelavante
 		 */
 		ArrayList<int[]> tablero = new ArrayList<int[]>();
 		int size = 8;
